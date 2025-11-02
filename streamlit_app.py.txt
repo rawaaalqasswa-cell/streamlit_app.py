@@ -1,0 +1,71 @@
+import streamlit as st
+import json
+import os
+
+# ضع اسم المستخدم واسم المستودع هنا ليعمل رابط "Edit on GitHub" بشكل صحيح
+OWNER = "rawaaalqasswa-cell"
+REPO = "installment-calculator"
+
+st.set_page_config(page_title="حاسبة التقسيط", page_icon="💳", layout="centered")
+st.title("حاسبة تقسيط بسيطة")
+st.caption("اختر جهازًا ومدة التقسيط لتحسب السعر الكلي وقيمة القسط الشهري")
+
+# Load data from data.json (editable in the GitHub repo)
+DATA_FILE = "data.json"
+if os.path.exists(DATA_FILE):
+    try:
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception as e:
+        st.error(f"خطأ بقراءة ملف البيانات {DATA_FILE}: {e}")
+        st.stop()
+else:
+    st.error(f"ملف البيانات {DATA_FILE} غير موجود.")
+    st.stop()
+
+DEVICES = data.get("devices", {})
+INCREASE_RATES = data.get("rates", {})
+INSTALLMENT_OPTIONS = sorted([int(x) for x in INCREASE_RATES.keys()])
+
+col1, col2 = st.columns([2, 1])
+
+with col1:
+    device_name = st.selectbox("اختر الجهاز", options=list(DEVICES.keys()))
+    price = DEVICES.get(device_name, 0.0)
+
+    months = st.selectbox("مدة التقسيط (بالأشهر)", options=INSTALLMENT_OPTIONS)
+
+with col2:
+    st.write("المعطيات")
+    st.write(f"السعر الأساسي: {price:,.2f} ريال")
+    st.write(f"مدة: {months} شهر")
+
+st.divider()
+
+rate = float(INCREASE_RATES.get(str(months), 0.0))
+total_price = price * (1 + rate)
+monthly_payment = total_price / months if months else 0
+
+st.subheader("النتيجة")
+st.metric(label="نسبة الزيادة", value=f"{rate*100:.2f}%")
+st.metric(label="السعر بعد الزيادة", value=f"{total_price:,.2f} ريال")
+st.metric(label="القسط الشهري", value=f"{monthly_payment:,.2f} ريال")
+
+st.markdown(
+    """
+    **تفصيل الحساب**  
+    السعر الأساسي × (1 + نسبة الزيادة) = السعر بعد الزيادة  
+    القسط الشهري = السعر بعد الزيادة ÷ عدد الأشهر
+    """
+)
+
+st.divider()
+
+# رابط سريع لتعديل data.json على GitHub (بعد أن تنشئ المستودع)
+edit_url = f"https://github.com/{OWNER}/{REPO}/edit/main/{DATA_FILE}"
+st.info(f"لتعديل الأسعار أو نسب الزيادة افتح ملف data.json في المستودع (Edit on GitHub): {edit_url}")
+
+with st.expander("عرض / نسخ محتوى data.json الحالي"):
+    st.code(json.dumps(data, ensure_ascii=False, indent=2))
+
+st.caption("بعد تعديل ملف data.json في GitHub و عمل push، إذا نشرت التطبيق على Streamlit Community Cloud فسيتم تحديث التطبيق عند تحديث الملفات في المستودع.")
